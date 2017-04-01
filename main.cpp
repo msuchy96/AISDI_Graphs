@@ -1,143 +1,58 @@
 #include <iostream>
 #include <fstream>
-#include <string>
 #include <vector>
 #include <algorithm>
+#include "Graph.h"
+#include <chrono>
+#include <ctime>
 
-std::vector<int> *FirstGraph;  int v_f = 0;
-std::vector<int> *SecondGraph; int v_s = 0;
 int *permutationTab = nullptr;
 
-
-bool checkBasicPropereties(int edge_counter_F,int edge_counter_S)
-{
-    if(v_f != v_s || edge_counter_F != edge_counter_S)
-        return false;
-
- return true;
-
-}
-
-bool createGraph(int &a,int &b,int &counter,int &v, std::vector<int>*& Graph )
-{
-    if( a<0 || a >= v || b<0 || b >=v )
-        return false;
-
-    counter++;
-    Graph[a].push_back(b);
-    if( a != b )
-        Graph[b].push_back(a);
-    return true;
-
-}
-
-bool openFile(char* argv[])
-{
-    std::ifstream file;
-    int edge_counter_F=0;
-    int edge_counter_S=0;
-
-    file.open( argv[1] );
-    if (!file.good())
-        return false;
-
-    file >> v_f; /// n - liczba wierzecholkow
-    FirstGraph = new std::vector<int>[v_f]; /// deklaracja tablicy wektorow
-    int a,b;
-    while( !file.eof() ) /// jedna funkcja w obu grafach
-    {
-
-        file >> a >> b;
-        if(!createGraph(a,b,edge_counter_F,v_f,FirstGraph))
-            return false;
-
-    }
-    file.close();
-
-
-    file.open( argv[2] );
-    if (!file.good()) {
-        delete[] FirstGraph;
-        return false;
-    }
-
-
-    file >> v_s;
-    SecondGraph = new std::vector<int>[v_s];
-    while( !file.eof() )  /// jedna funkcja w obu grafach
-    {
-
-        file >> a >> b;
-
-        if(!createGraph(a,b,edge_counter_S,v_s,SecondGraph))
-            return false;
-
-
-    }
-    file.close();
-
-
-    return checkBasicPropereties(edge_counter_F, edge_counter_S);
-    /// return (v_f==v_s && edge_counter_F == edge_counter_s);
-}
-
-void createPermutationTab()
-{
-    permutationTab = new int[v_f];
-    for(int i=0; i<v_s; i++)
-        permutationTab[i]=i;
-
-}
-
-void sortSecondGraph()
-{
-    for(int i=0; i<v_f; i++)
-        std::sort(SecondGraph[i].begin(), SecondGraph[i].end());
-
-}
-
-bool checkDegsV()
-{
-    int degsFirstGraph[v_f];
-    int degsSecondGraph[v_s];
-
-    for(int i=0; i<v_f; i++)
-    {
-        degsFirstGraph[i] = FirstGraph[i].size();
-        degsSecondGraph[i] = SecondGraph[i].size();
-    }
-    std::sort(degsFirstGraph, degsFirstGraph+v_f); /// Range of Tabs sort(first,last)
-    std::sort(degsSecondGraph, degsSecondGraph+v_s);
-
-    for(int i=0; i<v_f; i++)
-        if(degsFirstGraph[i] != degsSecondGraph[i])  /// checking degrees of vertex
-            return false;
-
-    return true;
-}
-
-void printPermutation()
+void Isomorphic(int v,bool isIt)
 {
 
-    for(int i=0; i<v_f; i++)
-        std::cout << i << " --> " << permutationTab[i] << "\n";
-}
-
-void Isomorphic(bool isIt)
-{
     if(isIt)
     {
         std::cout << "Izomorficzne\n";
-        printPermutation();
+        for(int i=0; i<v; i++)
+            std::cout << i << " --> " << permutationTab[i] << "\n";
     }
 
     else
         std::cout << "Nieizomorficzne\n";
 
-    delete[] FirstGraph;
-    delete[] SecondGraph;
-    delete permutationTab;
 
+    delete [] permutationTab;
+
+
+}
+
+void createPermutationTab(int v)
+{
+    permutationTab = new int[v];
+    for(int i=0; i<v; i++)
+        permutationTab[i]=i;
+
+}
+
+bool checkDegs(Graph &FirstGraph,Graph &SecondGraph)
+{
+    int degsFirstGraph[FirstGraph.v];
+    int degsSecondGraph[SecondGraph.v];
+
+    for(int i=0; i<FirstGraph.v; i++)
+    {
+        degsFirstGraph[i] = FirstGraph.vertexes[i].size();
+        degsSecondGraph[i] = SecondGraph.vertexes[i].size();
+    }
+    std::sort(degsFirstGraph, degsFirstGraph+FirstGraph.v); /// Range of Tabs sort(first,last)
+    std::sort(degsSecondGraph, degsSecondGraph+SecondGraph.v);
+
+    for(int i=0; i<FirstGraph.v; i++)
+        if(degsFirstGraph[i] != degsSecondGraph[i])  /// checking degrees of vertex
+            return false;
+
+    return true;
 }
 
 bool permutationTabOrder(int a, int b)
@@ -145,19 +60,19 @@ bool permutationTabOrder(int a, int b)
     return permutationTab[a] < permutationTab[b];
 }
 
-
-bool checkPermutation()
+bool checkPermutation(Graph &FirstGraph,Graph &SecondGraph)
 {
 
-    for(int i=0; i<v_f; i++)
+    for(int i=0; i<FirstGraph.v; i++)
     {
-        if(FirstGraph[i].size() != SecondGraph[permutationTab[i]].size()) /// checking degree of vertex
+        if(FirstGraph.vertexes[i].size() != SecondGraph.vertexes[permutationTab[i]].size()) /// checking degree of vertex
             return false;
 
-        std::sort(FirstGraph[i].begin() , FirstGraph[i].end(), permutationTabOrder); /// Sorting each record of Graph by permutationTabOrder
+        std::sort(FirstGraph.vertexes[i].begin(), FirstGraph.vertexes[i].end(), permutationTabOrder);
+        /// Sorting each record of Graph by permutationTabOrder
 
-        for(int j=0; j<FirstGraph[i].size(); j++)
-            if( permutationTab[ FirstGraph[i][j] ] != SecondGraph[permutationTab[i]][j] )
+        for(int j=0; j<FirstGraph.vertexes[i].size(); j++)
+            if( permutationTab[ FirstGraph.vertexes[i][j] ] != SecondGraph.vertexes[permutationTab[i]][j] )
                 return false;
 
     }
@@ -166,41 +81,57 @@ bool checkPermutation()
 
 }
 
-
-
-
-int main(int argc, char* argv[])
+bool isItIsomorphic(Graph &FirstGraph,Graph &SecondGraph)
 {
-    if(argc == 3 && openFile(argv))
-    {                                   /// basicPropereties checked
-        createPermutationTab();
-        sortSecondGraph();
-        if(!checkDegsV())
-        {
-            Isomorphic(false);
-            return 0;
-        }
+    if (FirstGraph.v != SecondGraph.v || FirstGraph.e != SecondGraph.e)
+        return false;
 
-        do
-        {
-            if(checkPermutation())
-            {
-                Isomorphic(true);
-                return 0;
-            }
+    createPermutationTab(FirstGraph.v);
 
-        }while(std::next_permutation(permutationTab,permutationTab+v_f));
+    for(int i=0; i<SecondGraph.v; i++)
+        std::sort(SecondGraph.vertexes[i].begin(), SecondGraph.vertexes[i].end());
+
+    if(!checkDegs(FirstGraph,SecondGraph))
+       return false;
+
+    do
+    {
+        if(checkPermutation(FirstGraph,SecondGraph))
+            return true;
 
 
-    }
-    else
+    }while(std::next_permutation(permutationTab,permutationTab+FirstGraph.v));
 
-        Isomorphic(false);
-    return 0;
 
+return false;
 
 }
 
 
+int main(int argc, char **argv)
+{
 
 
+
+
+
+
+    if (argc != 3)
+    {
+        std::cout << "Add files!" << std::endl;
+        return 0;
+    }
+    Graph FirstGraph(argv[1]);
+    Graph SecondGraph(argv[2]);
+
+    std::chrono::time_point<std::chrono::system_clock> start, end;
+    start = std::chrono::system_clock::now();
+
+    Isomorphic(FirstGraph.v,isItIsomorphic(FirstGraph, SecondGraph));
+
+    end = std::chrono::system_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end-start;
+    std::cout << "Finding Isomorphism: " << elapsed_seconds.count() << "s\n";
+
+    return 0;
+}
